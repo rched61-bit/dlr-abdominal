@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urgences Chirurgicales - Système d'Évaluation Médicale</title>
+    <style>
+        :root {
+            --primary-color: #8b0000;
+            --secondary-color: #1e3a8a;
+            --success-color: #16a34a;
+            --error-color: #dc2626;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), #4a0000);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 { margin: 0; font-size: 2rem; }
+        header p { margin: 5px 0 0; opacity: 0.9; font-size: 1rem; }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        /* لوحة الإحصائيات المتقدمة */
+        .dashboard {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .dashboard-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-val { font-size: 1.6rem; font-weight: bold; color: var(--text-color); }
+        .stat-val.score { color: var(--secondary-color); }
+        .stat-val.plus { color: var(--success-color); }
+        .stat-val.minus { color: var(--error-color); }
+        .stat-lbl { font-size: 0.8rem; color: #64748b; text-transform: uppercase; margin-top: 4px; font-weight: 600; }
+
+        /* نظام التبويب وفصل الدروس */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            background-color: #e2e8f0;
+            color: #475569;
+            border: none;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+        /* خانة الأخطاء والعناصر الواجب تذكرها */
+        .retenir-box {
+            background-color: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-left: 6px solid var(--error-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+        }
+
+        .retenir-title {
+            color: #9f1239;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .retenir-list {
+            padding-left: 20px;
+            margin: 0;
+            color: #4c0519;
+            font-size: 0.95rem;
+        }
+
+        .retenir-list li { margin-bottom: 8px; }
+        .retenir-empty { color: var(--success-color); font-style: italic; font-size: 0.95rem; }
+
+        /* كروت الأسئلة */
+        .qcm-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+            border-left: 4px solid #cbd5e1;
+        }
+
+        .qcm-card.validated { border-left-width: 6px; }
+        .qcm-card.validated.status-perfect { border-left-color: var(--success-color); }
+        .qcm-card.validated.status-failed { border-left-color: var(--error-color); }
+
+        .qcm-meta { font-size: 0.8rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .qcm-question { font-weight: 600; font-size: 1.05rem; margin-bottom: 12px; }
+        
+        .options-list { list-style: none; padding: 0; margin: 0; }
+        
+        .option-item {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .option-item:hover { background-color: #f1f5f9; }
+        .option-item.selected { background-color: #eff6ff; border-color: #3b82f6; }
+        
+        .checkbox-mock {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #cbd5e1;
+            border-radius: 4px;
+            display: inline-block;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .option-item.selected .checkbox-mock { border-color: #3b82f6; background-color: #3b82f6; }
+        .option-item.selected .checkbox-mock::after {
+            content: "✓"; color: white; font-size: 12px; font-weight: bold;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* الألوان بعد التصحيح */
+        .option-item.is-correct-ans { background-color: #dcfce7 !important; border-color: #22c55e !important; color: #15803d; }
+        .option-item.is-wrong-ans { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c; }
+
+        .btn-container { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn {
+            background-color: var(--secondary-color); color: white; border: none;
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+        }
+        .action-btn.abstention { background-color: #64748b; }
+        .action-btn:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+        .feedback-box { display: none; margin-top: 15px; border-radius: 6px; padding: 12px; font-size: 0.95rem; }
+        .feedback-box.visible { display: block; }
+        .feedback-box.perfect { background-color: #f0fdf4; border: 1px solid #bbf7d0; color: var(--success-color); font-weight: bold; }
+        .feedback-box.failed { background-color: #fee2e2; border: 1px solid #fecdd3; color: var(--error-color); font-weight: bold; }
+        .feedback-box.neutral { background-color: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; font-weight: bold; }
+        .explanation-box { display: none; background-color: #fffbec; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 8px; border-radius: 0 6px 6px 0; font-size: 0.95rem; }
+        .explanation-box.visible { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        footer { text-align: center; padding: 20px; background: #1e293b; color: white; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📝 CONCOURS INTERACTIF : URGENCES CHIRURGICALES</h1>
+    <p>Barème Officiel : Tout ou Rien (1 pt / -0.5 pt) | Pr M. BENDIB</p>
+</header>
+
+<div class="container">
+
+    <div class="dashboard">
+        <div class="dashboard-title">📊 TABLEAU DE BORD DES STATISTIQUES</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-val score" id="stat-score">0.00</div>
+                <div class="stat-lbl">Note Totale (Points)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="stat-answered">0 / 4</div>
+                <div class="stat-lbl">Progression</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val plus" id="stat-perfect">0</div>
+                <div class="stat-lbl">Tout (1.00 pt)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val minus" id="stat-failed">0</div>
+                <div class="stat-lbl">Rien (-0.50 pt)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="stat-neutral">0</div>
+                <div class="stat-lbl">Abstentions (0.00 pt)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="retenir-box">
+        <div class="retenir-title">⚠️ ÉLÉMENTS À RETENIR (Récidives d'erreurs à réviser)</div>
+        <ul class="retenir-list" id="retenir-list">
+            <li class="retenir-empty" id="retenir-empty">Aucune erreur enregistrée pour le moment. Continuez ainsi !</li>
+        </ul>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('cours-appendicite')">1. Appendicites Aiguës</button>
+        <button class="tab-btn" onclick="switchTab('cours-peritonite')">2. Péritonites Aiguës</button>
+        <button class="tab-btn" onclick="switchTab('cours-occlusion')">3. Occlusions Intestinales</button>
+        <button class="tab-btn" onclick="switchTab('cours-hernie')">4. Hernies Pariétales</button>
+    </div>
+
+    <div id="cours-appendicite" class="tab-content active">
+        <div class="qcm-card" id="q-1" data-correct="A,B,D" data-notion="Appendicite aiguë : Absence de parallélisme anatomo-clinique strict (une forme gangrenée peut être indolore) et diagnostic purement clinique dans sa forme typique.">
+            <div class="qcm-meta">Cours : Appendicites Aiguës • QCM MULTIPLE</div>
+            <div class="qcm-question">Question 1 : Parmi les affirmations suivantes concernant l'appendicite aiguë, lesquelles sont exactes ?</div>
+            <ul class="options-list">
+                <li class="option-item" data-letter="A"><span class="checkbox-mock"></span> A. C'est l'inflammation aiguë de l'appendice iléo-coecal</li>
+                <li class="option-item" data-letter="B"><span class="checkbox-mock"></span> B. C'est la plus fréquente des urgences chirurgicales</li>
+                <li class="option-item" data-letter="C"><span class="checkbox-mock"></span> C. Elle présente toujours un parallélisme anatomo-clinique strict</li>
+                <li class="option-item" data-letter="D"><span class="checkbox-mock"></span> D. Son évolution est imprévisible</li>
+                <li class="option-item" data-letter="E"><span class="checkbox-mock"></span> E. Le diagnostic est essentiellement histologique</li>
+            </ul>
+            <div class="btn-container">
+                <button class="action-btn" onclick="validateQCM('q-1')">Valider (Tout ou Rien)</button>
+                <button class="action-btn abstention" onclick="abstainQCM('q-1')">Abstention (0 pt)</button>
+            </div>
+            <div class="feedback-box"></div>
+            <div class="explanation-box">📌 <strong>Rappel Anatomopathologique :</strong> L'appendicite se caractérise par le manque de parallélisme. Le diagnostic initial repose sur la clinique (douleur Mac Burney, défense FID).</div>
+        </div>
+    </div>
+
+    <div id="cours-peritonite" class="tab-content">
+        <div class="qcm-card" id="q-2" data-correct="A,B,C" data-notion="Péritonites : Fibroscopie, colonoscopie et lavements barytés sont formellement CONTRE-INDIQUÉS (risque de perforation aggravée et péritonite plastique par baryum).">
+            <div class="qcm-meta">Cours : Péritonites Aiguës • QCM MULTIPLE</div>
+            <div class="qcm-question">Question 2 : Concernant les examens complémentaires contre-indiqués en urgence devant une suspicion de péritonite aiguë, lesquels sont exacts ?</div>
+            <ul class="options-list">
+                <li class="option-item" data-letter="A"><span class="checkbox-mock"></span> A. La fibroscopie digestive haute</li>
+                <li class="option-item" data-letter="B"><span class="checkbox-mock"></span> B. Le lavement baryté</li>
+                <li class="option-item" data-letter="C"><span class="checkbox-mock"></span> C. La colonoscopie totale</li>
+                <li class="option-item" data-letter="D"><span class="checkbox-mock"></span> D. L'échographie abdominale</li>
+                <li class="option-item" data-letter="E"><span class="checkbox-mock"></span> E. La tomodensitométrie (TDM)</li>
+            </ul>
+            <div class="btn-container">
+                <button class="action-btn" onclick="validateQCM('q-2')">Valider (Tout ou Rien)</button>
+                <button class="action-btn abstention" onclick="abstainQCM('q-2')">Abstention (0 pt)</button>
+            </div>
+            <div class="feedback-box"></div>
+            <div class="explanation-box">📌 <strong>Rappel Clinique :</strong> Les examens endoscopiques forcent la pression intraluminale. Le baryum est toxique direct pour le péritoine. L'écho et le scanner sont autorisés et utiles.</div>
+        </div>
+    </div>
+
+    <div id="cours-occlusion" class="tab-content">
+        <div class="qcm-card" id="q-3" data-correct="B,C" data-notion="NHA à l'ASP : Grêle = Centraux, nombreux, plus larges que hauts. Côlon = Périphériques, peu nombreux, plus hauts que larges.">
+            <div class="qcm-meta">Cours : Occlusions Intestinales • QCM MULTIPLE</div>
+            <div class="qcm-question">Question 3 : Concernant l'analyse des Niveaux Hydroaériques (NHA) sur un cliché d'ASP face debout, quelles affirmations sont vraies ?</div>
+            <ul class="options-list">
+                <li class="option-item" data-letter="A"><span class="checkbox-mock"></span> A. Les niveaux du grêle sont périphériques et plus hauts que larges</li>
+                <li class="option-item" data-letter="B"><span class="checkbox-mock"></span> B. Les niveaux du grêle sont centraux, nombreux et plus larges que hauts</li>
+                <li class="option-item" data-letter="C"><span class="checkbox-mock"></span> C. Les niveaux du côlon sont périphériques en cadre et plus hauts que larges</li>
+                <li class="option-item" data-letter="D"><span class="checkbox-mock"></span> D. Les niveaux du côlon sont très nombreux et plus larges que hauts</li>
+            </ul>
+            <div class="btn-container">
+                <button class="action-btn" onclick="validateQCM('q-3')">Valider (Tout ou Rien)</button>
+                <button class="action-btn abstention" onclick="abstainQCM('q-3')">Abstention (0 pt)</button>
+            </div>
+            <div class="feedback-box"></div>
+            <div class="explanation-box">📌 <strong>Règle Radiologique (Mnémonique) :</strong> Grêle = <strong>L</strong>arge (comme la lettre L). Côlon = <strong>H</strong>aut (comme la lettre H).</div>
+        </div>
+    </div>
+
+    <div id="cours-hernie" class="tab-content">
+        <div class="qcm-card" id="q-4" data-correct="B,D" data-notion="Hernie crurale : Se situe AU-DESSOUS de la ligne de Malgaigne, touche la femme âgée, et présente un risque d'étranglement maximal car l'orifice est rigide.">
+            <div class="qcm-meta">Cours : Hernies Pariétales • QCM MULTIPLE</div>
+            <div class="qcm-question">Question 4 : Quelles sont les caractéristiques spécifiques de la hernie crurale (fémorale) ?</div>
+            <ul class="options-list">
+                <li class="option-item" data-letter="A"><span class="checkbox-mock"></span> A. Son collet est situé au-dessus de la ligne de Malgaigne</li>
+                <li class="option-item" data-letter="B"><span class="checkbox-mock"></span> B. Son collet est situé au-dessous de la ligne de Malgaigne</li>
+                <li class="option-item" data-letter="C"><span class="checkbox-mock"></span> C. Elle est plus fréquente chez l'homme jeune sportif</li>
+                <li class="option-item" data-letter="D"><span class="checkbox-mock"></span> D. Elle possède un risque d'étranglement herniaire extrêmement élevé</li>
+            </ul>
+            <div class="btn-container">
+                <button class="action-btn" onclick="validateQCM('q-4')">Valider (Tout ou Rien)</button>
+                <button class="action-btn abstention" onclick="abstainQCM('q-4')">Abstention (0 pt)</button>
+            </div>
+            <div class="feedback-box"></div>
+            <div class="explanation-box">📌 <strong>Rappel Topographique :</strong> La hernie crurale se développe sous l'arcade crurale (en dedans des vaisseaux fémoraux). L'étroitesse et la rigidité de cet orifice expliquent la fréquence de la strangulation.</div>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    <p>💡 Système d'Examen Médical Avancé - Tout ou Rien v3.0</p>
+</footer>
+
+<script>
+    // نظام التنقل والفصل بين الدروس
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // إدارة اختيار الإجابات عند النقر
+    document.querySelectorAll('.option-item').forEach(item => {
+        item.addEventListener('click', function() {
+            let card = this.closest('.qcm-card');
+            if (card.classList.contains('validated')) return; // منع التغيير بعد التصحيح
+            this.classList.toggle('selected');
+        });
+    });
+
+    // كائن الإحصائيات الشاملة
+    let globalStats = {
+        totalQuestions: 4,
+        answered: 0,
+        perfect: 0,
+        failed: 0,
+        neutral: 0,
+        totalScore: 0.00
+    };
+
+    // تحديث واجهة لوحة الإحصائيات
+    function updateDashboard() {
+        document.getElementById('stat-score').innerText = globalStats.totalScore.toFixed(2);
+        document.getElementById('stat-answered').innerText = `${globalStats.answered} / ${globalStats.totalQuestions}`;
+        document.getElementById('stat-perfect').innerText = globalStats.perfect;
+        document.getElementById('stat-failed').innerText = globalStats.failed;
+        document.getElementById('stat-neutral').innerText = globalStats.neutral;
+        
+        // تعديل لون النتيجة الإجمالية إذا كانت سالبة
+        if(globalStats.totalScore < 0) {
+            document.getElementById('stat-score').style.color = 'var(--error-color)';
+        } else if(globalStats.totalScore > 0) {
+            document.getElementById('stat-score').style.color = 'var(--success-color)';
+        }
+    }
+
+    // نظام التصحيح: الكل أو لا شيء (Tout ou Rien)
+    function validateQCM(qcmId) {
+        let card = document.getElementById(qcmId);
+        if (card.classList.contains('validated')) return;
+
+        let correctAnswers = card.getAttribute('data-correct').split(',');
+        let selectedItems = card.querySelectorAll('.option-item.selected');
+        let selectedLetters = Array.from(selectedItems).map(el => el.getAttribute('data-letter'));
+
+        if (selectedLetters.length === 0) {
+            alert("Veuillez sélectionner au moins un choix, ou cliquez sur 'Abstention' !");
+            return;
+        }
+
+        card.classList.add('validated');
+        disableButtons(card);
+
+        // فحص التطابق التام (Tout ou Rien)
+        let isPerfect = true;
+
+        card.querySelectorAll('.option-item').forEach(item => {
+            let letter = item.getAttribute('data-letter');
+            let isCorrectOption = correctAnswers.includes(letter);
+            let isSelectedOption = selectedLetters.includes(letter);
+
+            // تلوين الخيارات بالكامل لإظهار الإجابة النموذجية
+            if (isCorrectOption) {
+                item.classList.add('is-correct-ans');
+                if (!isSelectedOption) isPerfect = false; // لم يقم باختيار إجابة صحيحة
+            } else {
+                if (isSelectedOption) {
+                    item.classList.add('is-wrong-ans'); // اختار إجابة خاطئة
+                    isPerfect = false;
+                }
+            }
+        });
+
+        let feedback = card.querySelector('.feedback-box');
+        feedback.classList.add('visible');
+
+        if (isPerfect) {
+            card.classList.add('status-perfect');
+            feedback.className = "feedback-box perfect";
+            feedback.innerHTML = "🎉 TOUT ! (1.00 Point) — Réponse parfaitement exacte.";
+            globalStats.perfect++;
+            globalStats.totalScore += 1.00;
+        } else {
+            card.classList.add('status-failed');
+            feedback.className = "feedback-box failed";
+            feedback.innerHTML = `❌ RIEN ! (-0.50 Point) — Erreur ou omission. Correct : ${correctAnswers.join(', ')}`;
+            globalStats.failed++;
+            globalStats.totalScore -= 0.50; // خصم نقاط بسبب الخطأ
+
+            // إضافة العنصر إلى خانة "عناصر يجب تذكرها ومراجعتها" تلقائياً
+            addNotionToRetenir(card.getAttribute('data-notion'));
+        }
+
+        card.querySelector('.explanation-box').classList.add('visible');
+        globalStats.answered++;
+        updateDashboard();
+    }
+
+    // خيار الامتناع عن الإجابة لضمان الصفر وتفادي النتيجة السالبة
+    function abstainQCM(qcmId) {
+        let card = document.getElementById(qcmId);
+        if (card.classList.contains('validated')) return;
+
+        let correctAnswers = card.getAttribute('data-correct').split(',');
+        card.classList.add('validated');
+        disableButtons(card);
+
+        // إظهار الإجابات الصحيحة بدون تلوين أحمر سلبي
+        card.querySelectorAll('.option-item').forEach(item => {
+            let letter = item.getAttribute('data-letter');
+            if (correctAnswers.includes(letter)) {
+                item.classList.add('is-correct-ans');
+            }
+        });
+
+        let feedback = card.querySelector('.feedback-box');
+        feedback.className = "feedback-box neutral";
+        feedback.classList.add('visible');
+        feedback.innerHTML = `🏳️ ABSTENTION (0.00 Point). La bonne réponse était : ${correctAnswers.join(', ')}`;
+
+        card.querySelector('.explanation-box').classList.add('visible');
+        globalStats.neutral++;
+        globalStats.answered++;
+        updateDashboard();
+    }
+
+    function disableButtons(card) {
+        card.querySelectorAll('.action-btn').forEach(btn => btn.disabled = true);
+    }
+
+    // إضافة مفهوم علمي لخانة المراجعة والأخطاء
+    function addNotionToRetenir(notionText) {
+        let emptyMsg = document.getElementById('retenir-empty');
+        if (emptyMsg) emptyMsg.remove();
+
+        let list = document.getElementById('retenir-list');
+        
+        // منع التكرار في القائمة
+        let items = list.getElementsByTagName('li');
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].innerText === notionText) return;
+        }
+
+        let li = document.createElement('li');
+        li.innerHTML = `<strong>💡 À retenir :</strong> ${notionText}`;
+        list.appendChild(li);
+    }
+</script>
+
+</body>
+</html>
